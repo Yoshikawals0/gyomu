@@ -26,8 +26,11 @@
     "if(k==='withFailureHandler')return function(f){return runner(ok,f)};"+
     "return function(){var a=[].slice.call(arguments);call(k,a).then(function(r){if(ok)ok(r)},function(e){if(ng)ng(e)})}}})}"+
     "window.google={script:{run:runner(null,null),url:{getLocation:function(cb){var o={};q.forEach(function(v,k){o[k]=v});cb({parameter:o})}}}};"+
-    // 前回の画面で開いたときは、少し後に新しい画面を裏で受け取って覚えておく（次に開いたときから新しくなる）
-    "if(window.__FROM_CACHE)setTimeout(function(){fetch(API+'?raw=1',{cache:'no-store'}).then(function(r){return r.ok?r.text():''}).then(function(h){if(h&&h.indexOf('<html')>=0){try{localStorage.setItem(KEY,h)}catch(e){}}}).catch(function(){})},4000);"+
+    // 前回の画面で開いたときは、すぐ裏で新しい画面を受け取って覚えておく。版（app-build）が新しくなっていて、
+    // 入力中や写真を見ている途中でなければ、その場で読み直して新しい画面にする（すぐ閉じても次は新しい画面）
+    "if(window.__FROM_CACHE)fetch(API+'?raw=1',{cache:'no-store'}).then(function(r){return r.ok?r.text():''}).then(function(h){if(!h||h.indexOf('<html')<0)return;try{localStorage.setItem(KEY,h)}catch(e){}"+
+    "var t='app-build\" content=\"',i=h.indexOf(t),nb=i<0?'':h.substr(i+t.length,14),mm=document.querySelector('meta[name=app-build]'),cb=mm?mm.content:'';"+
+    "if(nb&&nb!==cb){var a=document.activeElement,ty=a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName),bz=['sheet','estf','custf','lb','cam-lb','sel'].some(function(id){var el=document.getElementById(id);return el&&!el.hidden});if(!ty&&!bz)location.reload()}}).catch(function(){});"+
     "})();<\/script>";
   function show(h,fromCache){
     h=h.replace("<head>","<head>\n"+(fromCache?"<script>window.__FROM_CACHE=1<\/script>":"")+SHIM+"\n<title>業務メニュー</title>").replace('<base target="_top">','');
