@@ -12,11 +12,13 @@
 /* 業務メニューの入口（GitHub Pages）
    画面の本体は Googleドライブの「業務アプリ/アプリ画面.html」を Apps Script（?raw=1）から受け取って表示する。
    → アプリを直したときは今まで通りドライブのファイルを置き換えるだけ。ここ（GitHub）は触らなくてよい。
-   記録・写真の読み書きは Apps Script の doPost を fetch で呼ぶ（下の SHIM が google.script.run の代わりになる）。 */
+   記録・写真の読み書きは Apps Script の doPost を fetch で呼ぶ（下の SHIM が google.script.run の代わりになる）。
+   2026-11-28 速く開くように：前回の画面をこのスマホに覚えておき、まずそれを出す。
+     新しい画面は裏で受け取って覚えておき、次に開いたときから使う（初めてのときだけ受け取るまで待つ）。 */
 (function(){
   var API="https://script.google.com/macros/s/AKfycbx8F7fUwGlku4gZgP2jjHjasKbTdhNsr_5Jgk9npK7BpPtPEkMxx-InSEhHoFK9vmE_/exec";
   var KEY="gyomu-app-html";
-  var SHIM="<script>(function(){var API="+JSON.stringify(API)+";"+
+  var SHIM="<script>(function(){var API="+JSON.stringify(API)+",KEY="+JSON.stringify(KEY)+";"+
     "var q=new URLSearchParams(location.search),p=q.get('p');if(p)window.START_PAGE=p.replace(/[^a-z]/g,'');"+
     "function call(fn,args){return fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({fn:fn,args:args})})"+
     ".then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json()}).then(function(j){if(!j.ok)throw new Error(j.error||'error');return j.result})}"+
@@ -24,23 +26,23 @@
     "if(k==='withFailureHandler')return function(f){return runner(ok,f)};"+
     "return function(){var a=[].slice.call(arguments);call(k,a).then(function(r){if(ok)ok(r)},function(e){if(ng)ng(e)})}}})}"+
     "window.google={script:{run:runner(null,null),url:{getLocation:function(cb){var o={};q.forEach(function(v,k){o[k]=v});cb({parameter:o})}}}};"+
+    // 前回の画面で開いたときは、少し後に新しい画面を裏で受け取って覚えておく（次に開いたときから新しくなる）
+    "if(window.__FROM_CACHE)setTimeout(function(){fetch(API+'?raw=1',{cache:'no-store'}).then(function(r){return r.ok?r.text():''}).then(function(h){if(h&&h.indexOf('<html')>=0){try{localStorage.setItem(KEY,h)}catch(e){}}}).catch(function(){})},4000);"+
     "})();<\/script>";
-  function show(h){
-    h=h.replace("<head>","<head>\n"+SHIM+"\n<title>業務メニュー</title>").replace('<base target="_top">','');
+  function show(h,fromCache){
+    h=h.replace("<head>","<head>\n"+(fromCache?"<script>window.__FROM_CACHE=1<\/script>":"")+SHIM+"\n<title>業務メニュー</title>").replace('<base target="_top">','');
     document.open();document.write(h);document.close();
   }
-  function fail(){
-    var c=null;try{c=localStorage.getItem(KEY)}catch(e){}
-    if(c){show(c);return}
-    document.getElementById("ld").innerHTML="読み込めませんでした。<br>電波の良い所で、開き直してください。";
-  }
-  var done=false,t=setTimeout(function(){if(!done){done=true;fail()}},15000);
+  var c=null;try{c=localStorage.getItem(KEY)}catch(e){}
+  if(c&&c.indexOf("<html")>=0){show(c,true);return}
+  // 初めて（覚えている画面がない）ときだけ、受け取るまで待つ
+  var done=false,t=setTimeout(function(){if(!done){done=true;document.getElementById("ld").innerHTML="読み込めませんでした。<br>電波の良い所で、開き直してください。"}},20000);
   fetch(API+"?raw=1",{cache:"no-store"}).then(function(r){if(!r.ok)throw 0;return r.text()}).then(function(h){
     if(done)return;done=true;clearTimeout(t);
-    if(h.indexOf("<html")<0){fail();return}
+    if(h.indexOf("<html")<0)throw 0;
     try{localStorage.setItem(KEY,h)}catch(e){}
-    show(h);
-  }).catch(function(){if(!done){done=true;clearTimeout(t);fail()}});
+    show(h,false);
+  }).catch(function(){if(!done){done=true;clearTimeout(t);document.getElementById("ld").innerHTML="読み込めませんでした。<br>電波の良い所で、開き直してください。"}});
 })();
 </script>
 </body>
